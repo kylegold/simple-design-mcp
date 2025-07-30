@@ -1,7 +1,7 @@
 {
   "name": "@kylegold/simple-design-mcp",
-  "version": "1.0.0",
-  "description": "Design beautiful apps without coding - just tell me what you want to build!",
+  "version": "3.0.0",
+  "description": "Simple Design MCP Orchestrator - Orchestrates app design workflows for Claude Code local execution",
   "main": "index.js",
   "type": "module",
   "bin": {

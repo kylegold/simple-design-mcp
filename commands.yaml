@@ -1,17 +1,17 @@
-name: simple-design-mcp
-description: Design beautiful apps without coding - see live HTML preview instantly!
-version: 2.0.0
+name: simple-design-mcp-orchestrator
+description: Orchestrates app design workflows for Claude Code local execution - no rate limits!
+version: 3.0.0
 author: Kyle Gold
 license: PROPRIETARY
 
 commands:
   - name: design-app
-    title: Design Your App
+    title: Design Your App (Orchestrated)
     type: command
     category: app-design
     commandName: "/design-app"
     aiPlatform: "claude-code@2025.06"
-    description: Start designing your app by describing what you want to build. Creates actual HTML files you can preview in your browser immediately!
+    description: Get a workflow to design your app locally - no rate limits! Claude Code executes the design process using your tokens.
     content: command-docs/design.md
     readme: command-docs/README.md
     license: LICENSE
@@ -32,17 +32,17 @@ commands:
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "2.0.0"
-        name: "simple-design-mcp"
-        description: "Visual HTML design with live preview"
+        version: "3.0.0"
+        name: "simple-design-mcp-orchestrator"
+        description: "Orchestrates design workflows for local execution"
 
   - name: update-design
-    title: Update Your Design
+    title: Update Your Design (Orchestrated)
     type: command
     category: app-design
     commandName: "/update-design"
     aiPlatform: "claude-code@2025.06"
-    description: Make changes to your current design - update colors, add components, change layout, etc. See changes instantly in your browser!
+    description: Get a workflow to update your design locally - Claude Code makes the changes using your resources.
     content: command-docs/update.md
     readme: command-docs/README.md
     license: LICENSE
@@ -63,9 +63,9 @@ commands:
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "2.0.0"
-        name: "simple-design-mcp"
-        description: "Visual HTML design with live preview"
+        version: "3.0.0"
+        name: "simple-design-mcp-orchestrator"
+        description: "Orchestrates design workflows for local execution"
 
   - name: preview-design
     title: Preview Your Design
@@ -88,9 +88,9 @@ commands:
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "2.0.0"
-        name: "simple-design-mcp"
-        description: "Visual HTML design with live preview"
+        version: "3.0.0"
+        name: "simple-design-mcp-orchestrator"
+        description: "Orchestrates design workflows for local execution"
 
   - name: export-react
     title: Export to React
@@ -113,9 +113,9 @@ commands:
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "2.0.0"
-        name: "simple-design-mcp"
-        description: "Visual HTML design with live preview"
+        version: "3.0.0"
+        name: "simple-design-mcp-orchestrator"
+        description: "Orchestrates design workflows for local execution"
 
 metadata:
   created: "2025-07-30"
@@ -128,9 +128,9 @@ metadata:
     - MCP support
     - No authentication required
   features:
-    - "Live HTML preview with auto-refresh"
-    - "Visual component library"
-    - "Responsive design templates"
-    - "Smart app type detection"
-    - "Incremental updates"
-    - "React export when ready"
+    - "Orchestrated workflows - no rate limits!"
+    - "Uses YOUR Claude Code tokens"
+    - "Lightweight agent templates"
+    - "Component specifications"
+    - "Local execution patterns"
+    - "Scalable architecture"

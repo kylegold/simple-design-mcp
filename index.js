@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
-import { ProjectManager } from './src/managers/ProjectManager.js';
+import { WorkflowOrchestrator } from './src/orchestrator/WorkflowOrchestrator.js';
 import { verifyJwt } from './src/auth/verifyToken.js';
 
 // Load environment variables
@@ -25,72 +25,86 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
 
-// Initialize project manager
-const projectManager = new ProjectManager();
+// Initialize workflow orchestrator
+const orchestrator = new WorkflowOrchestrator();
 
-// Tool definitions for MCP
+// Tool definitions for MCP - Now orchestration tools
 const tools = [
   {
-    name: 'simple_design_create',
-    description: 'Start designing a new app - just describe what you want to build!',
+    name: 'simple_design_orchestrate',
+    description: 'Get a workflow for designing apps - returns instructions for Claude Code to execute locally',
     inputSchema: {
       type: 'object',
       properties: {
-        description: {
+        task: {
           type: 'string',
-          description: 'Describe the app you want to build'
+          enum: ['create_app', 'update_design', 'add_component'],
+          description: 'The design task to orchestrate'
         },
-        path: {
-          type: 'string',
-          description: 'Where to create the project (optional, defaults to current directory)'
+        input: {
+          type: 'object',
+          description: 'Task-specific input parameters',
+          properties: {
+            description: {
+              type: 'string',
+              description: 'For create_app: describe what you want to build'
+            },
+            request: {
+              type: 'string',
+              description: 'For update_design: what to change'
+            },
+            component_request: {
+              type: 'string',
+              description: 'For add_component: what component to add'
+            },
+            projectName: {
+              type: 'string',
+              description: 'Project name (for updates)'
+            },
+            path: {
+              type: 'string',
+              description: 'Where to create the project'
+            }
+          }
         }
       },
-      required: ['description']
+      required: ['task', 'input']
     }
   },
   {
-    name: 'simple_design_update',
-    description: 'Update or refine your current design',
+    name: 'simple_design_get_agent',
+    description: 'Get a specific agent template for local execution',
     inputSchema: {
       type: 'object',
       properties: {
-        request: {
+        agentName: {
           type: 'string',
-          description: 'What would you like to change?'
+          description: 'Name of the agent template to retrieve'
         },
-        projectName: {
+        action: {
           type: 'string',
-          description: 'Project name (optional, uses most recent if not specified)'
+          description: 'The action method to get'
         }
       },
-      required: ['request']
+      required: ['agentName']
     }
   },
   {
-    name: 'simple_design_preview',
-    description: 'Get the current design status and preview URLs',
+    name: 'simple_design_get_component',
+    description: 'Get component specifications for UI building',
     inputSchema: {
       type: 'object',
       properties: {
-        projectName: {
+        componentName: {
           type: 'string',
-          description: 'Project name (optional, uses most recent if not specified)'
-        }
-      }
-    }
-  },
-  {
-    name: 'simple_design_export_react',
-    description: 'Convert your HTML design to a React app',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        projectName: {
+          description: 'Name of the component to get specs for'
+        },
+        appType: {
           type: 'string',
-          description: 'Project name to export'
+          description: 'App type for context-specific components'
         }
       },
-      required: ['projectName']
+      required: ['componentName']
     }
   }
 ];
@@ -120,8 +134,8 @@ app.get('/health', async (req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    server: 'simple-design-mcp',
-    version: '2.0.0'
+    server: 'simple-design-mcp-orchestrator',
+    version: '3.0.0'
   });
 });
 
@@ -130,9 +144,9 @@ app.get('/.well-known/mcp.json', (req, res) => {
   res.json({
     schemaVersion: "2024-11-05",
     vendor: "Commands.com",
-    name: "simple-design-mcp",
-    version: "2.0.0",
-    description: "Design beautiful apps without coding - see live HTML preview instantly!",
+    name: "simple-design-mcp-orchestrator",
+    version: "3.0.0",
+    description: "Orchestrates app design workflows for Claude Code local execution",
     license: "PROPRIETARY",
     capabilities: {
       tools: {
@@ -140,8 +154,8 @@ app.get('/.well-known/mcp.json', (req, res) => {
       }
     },
     serverInfo: {
-      name: "simple-design-mcp",
-      version: "2.0.0"
+      name: "simple-design-mcp-orchestrator",
+      version: "3.0.0"
     }
   });
 });
@@ -149,9 +163,9 @@ app.get('/.well-known/mcp.json', (req, res) => {
 // Root endpoint with basic info
 app.get('/', (req, res) => {
   res.json({
-    name: "simple-design-mcp",
-    description: "Design beautiful apps without coding - see live HTML preview instantly!",
-    version: "2.0.0",
+    name: "simple-design-mcp-orchestrator",
+    description: "Orchestrates app design workflows for Claude Code local execution",
+    version: "3.0.0",
     endpoints: {
       health: '/health',
       discovery: '/.well-known/mcp.json'
@@ -175,80 +189,59 @@ const authMiddleware = skipAuth ?
   } : 
   verifyJwt;
 
-// Tool handler functions
+// Tool handler functions - Now returns workflows instead of executing
 async function handleTool(toolName, params, user) {
   try {
     switch (toolName) {
-      case 'simple_design_create': {
-        const result = await projectManager.createProject(
-          params.description,
-          params.path || '.'
-        );
+      case 'simple_design_orchestrate': {
+        // Get the workflow from orchestrator
+        const workflow = orchestrator.orchestrate(params.task, params.input);
         
-        // Format file operations as instructions
-        const instructions = projectManager.formatOperations(result.operations);
-        
-        return `${result.message}
-
-📝 File operations to execute:
-${instructions}
-
-The HTML files will auto-refresh every 3 seconds as you make changes.`;
+        // Return workflow as JSON for Claude Code to execute
+        return JSON.stringify(workflow, null, 2);
       }
       
-      case 'simple_design_update': {
-        // Find the most recent project if not specified
-        const targetProject = params.projectName || 
-          Array.from(projectManager.projects.keys()).pop();
-          
-        if (!targetProject) {
-          return 'No active project found. Please create a project first using simple_design_create.';
+      case 'simple_design_get_agent': {
+        // Get specific agent template
+        const agent = orchestrator.agentTemplates[params.agentName];
+        
+        if (!agent) {
+          throw new Error(`Unknown agent: ${params.agentName}`);
         }
         
-        const result = await projectManager.updateProject(
-          targetProject,
-          params.request
-        );
+        const action = params.action ? agent[params.action] : agent;
         
-        const instructions = projectManager.formatOperations(result.operations);
-        
-        return `${result.message}
-
-📝 Updates to apply:
-${instructions}
-
-Affected files: ${result.affectedFiles.join(', ')}`;
+        return JSON.stringify({
+          agentName: params.agentName,
+          action: params.action || 'all',
+          template: action
+        }, null, 2);
       }
       
-      case 'simple_design_preview': {
-        const targetProject = params.projectName || 
-          Array.from(projectManager.projects.keys()).pop();
+      case 'simple_design_get_component': {
+        // Get component specification
+        const component = orchestrator.getComponentTemplate(params.componentName);
+        
+        if (!component) {
+          // Try to get app-specific component
+          const appComponents = orchestrator.getComponentSpecs(params.appType || 'general');
+          const appComponent = appComponents[params.componentName];
           
-        if (!targetProject) {
-          return 'No active project found. Please create a project first.';
+          if (!appComponent) {
+            throw new Error(`Unknown component: ${params.componentName}`);
+          }
+          
+          return JSON.stringify({
+            componentName: params.componentName,
+            appType: params.appType,
+            specification: appComponent
+          }, null, 2);
         }
         
-        const status = projectManager.getProjectStatus(targetProject);
-        
-        return `## ${status.projectName} - ${status.appType} App
-
-📂 Project Structure:
-${status.screens.map(s => `• ${s.name}: ${s.file}`).join('\n')}
-
-✨ Features:
-${status.features.map(f => `• ${f}`).join('\n')}
-
-🔗 Preview URL: ${status.previewUrl}
-
-📅 Created: ${new Date(status.created).toLocaleString()}
-📅 Last Modified: ${new Date(status.lastModified).toLocaleString()}
-
-Open the preview URL in your browser to see your design!`;
-      }
-      
-      case 'simple_design_export_react': {
-        const result = await projectManager.exportToReact(params.projectName);
-        return result.message;
+        return JSON.stringify({
+          componentName: params.componentName,
+          specification: component
+        }, null, 2);
       }
       
       default:
@@ -482,8 +475,8 @@ app.use((error, req, res, next) => {
 
 // Start server
 app.listen(PORT, HOST, () => {
-  console.log(`Simple Design MCP Server v2.0 running on ${HOST}:${PORT}`);
-  console.log(`Visual HTML design with live preview!`);
+  console.log(`Simple Design MCP Orchestrator v3.0 running on ${HOST}:${PORT}`);
+  console.log(`Orchestrating design workflows for Claude Code local execution`);
   
   if (isDevelopment) {
     console.log(`Available tools: ${tools.map(t => t.name).join(', ')}`);

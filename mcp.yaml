@@ -3,8 +3,8 @@
 
 metadata:
   version: "1.0"
-  name: "simple-design-mcp"
-  description: "Design beautiful apps without coding - just tell me what you want to build!"
+  name: "simple-design-mcp-orchestrator"
+  description: "Orchestrates app design workflows for Claude Code local execution"
   author: "Kyle Gold"
   homepage: "https://github.com/kylegold/simple-design-mcp"
   license: "PROPRIETARY"
@@ -12,8 +12,8 @@ metadata:
 server:
   # Basic Configuration
   serverId: "simple-design"
-  displayName: "Simple Design"
-  description: "Design beautiful React and React Native apps through natural conversation"
+  displayName: "Simple Design Orchestrator"
+  description: "Orchestrates app design workflows to avoid rate limits by using Claude Code's local execution"
   category: "app-design"
   capabilities:
     - "app-design"
@@ -23,8 +23,8 @@ server:
     - "react-native"
   
   # Version & Status
-  version: "1.0.0"
-  status: "alpha"
+  version: "3.0.0"
+  status: "beta"
     
   # Authentication
   auth:
@@ -40,45 +40,41 @@ server:
   # Tools & Resources  
   provides:
     tools:
-      - name: "simple_design_chat"
-        description: "Tell me what you want to build or change - just describe it naturally!"
+      - name: "simple_design_orchestrate"
+        description: "Get a workflow for designing apps - returns instructions for Claude Code to execute locally"
         parameters:
-          - name: "message"
+          - name: "task"
             type: "string"
             required: true
-            description: "Tell me what you want to build or change"
-          - name: "conversationId"
-            type: "string"
-            required: false
-            description: "Optional conversation ID to continue a previous conversation"
+            description: "The design task to orchestrate (create_app, update_design, add_component)"
+          - name: "input"
+            type: "object"
+            required: true
+            description: "Task-specific input parameters"
             
-      - name: "simple_design_show"
-        description: "Show me what we've designed so far"
+      - name: "simple_design_get_agent"
+        description: "Get a specific agent template for local execution"
         parameters:
-          - name: "conversationId"
+          - name: "agentName"
+            type: "string"
+            required: true
+            description: "Name of the agent template to retrieve"
+          - name: "action"
             type: "string"
             required: false
-            description: "Conversation ID"
+            description: "The action method to get"
             
-      - name: "simple_design_export"
-        description: "Generate the actual app code when you're ready"
+      - name: "simple_design_get_component"
+        description: "Get component specifications for UI building"
         parameters:
-          - name: "path"
+          - name: "componentName"
+            type: "string"
+            required: true
+            description: "Name of the component to get specs for"
+          - name: "appType"
             type: "string"
             required: false
-            description: "Where to export (defaults to current directory)"
-          - name: "conversationId"
-            type: "string"
-            required: false
-            description: "Conversation ID"
-            
-      - name: "simple_design_examples"
-        description: "See examples of different app types for inspiration"
-        parameters:
-          - name: "type"
-            type: "string"
-            required: false
-            description: "Type of app (e.g., 'recipe', 'fitness', 'social')"
+            description: "App type for context-specific components"
 
 # Pricing (Free tier available)
 pricing:

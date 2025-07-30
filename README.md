@@ -1,162 +1,153 @@
-# Simple Design MCP v2.0
+# Simple Design MCP Orchestrator v3.0
 
-Design beautiful apps without coding - see live HTML preview instantly! 🎨✨
+Orchestrates app design workflows for Claude Code local execution - no more rate limits! 🎯
 
-## What's New in v2.0
+## What's New in v3.0 - The Orchestrator Architecture
 
-- **🌐 Live HTML Preview**: See your design in the browser immediately
-- **♻️ Auto-refresh**: HTML updates every 3 seconds as you make changes
-- **🎨 Visual Components**: Pre-built UI components you can see and customize
-- **📱 Responsive Design**: All designs work on mobile and desktop
-- **⚡ Instant Updates**: Change colors, add components, modify layouts in real-time
-- **⚛️ React Export**: Convert to React when you're happy with the design
+### The Problem We Solved
+- **v2.0 Issue**: MCP server did all the work, hitting rate limits (100 req/min)
+- **v3.0 Solution**: MCP returns workflows, Claude Code executes locally using YOUR tokens
 
-## How It Works
-
-1. **Describe Your App**: Tell the AI what you want to build
-2. **See It Instantly**: HTML files are created on your machine
-3. **Open in Browser**: View your design with auto-refresh
-4. **Make Changes**: Update colors, layout, components with simple commands
-5. **Export to React**: Convert to production code when ready
-
-## Available Tools
-
-### 🚀 `simple_design_create`
-Start designing a new app by describing what you want to build.
-
-**Example:**
+### How It Works Now
 ```
-Use simple_design_create with description "I want to build a recipe sharing app where users can upload photos and organize by cuisine"
+User → Commands.com → MCP Orchestrator → Workflow Instructions → Claude Code (local execution) → Success!
 ```
 
-This creates:
-- `recipe-app-1234/index.html` - Your home page
-- `recipe-app-1234/browse.html` - Browse recipes page
-- `recipe-app-1234/assets/styles/main.css` - Custom styles
-- And more pages based on your app type!
+## Key Benefits
 
-### ✏️ `simple_design_update`
-Make changes to your current design - update colors, add components, change layouts.
+1. **🚀 No Rate Limits** - Uses your Claude Code tokens, not the server's
+2. **⚡ Faster Execution** - No network roundtrips for AI calls
+3. **🔍 Full Transparency** - See exactly what's happening
+4. **🛡️ Better Privacy** - Your data stays on your machine
+5. **📈 Infinitely Scalable** - Server just returns instructions
 
-**Examples:**
+## Available Orchestration Tools
+
+### 🎼 `simple_design_orchestrate`
+Get a complete workflow for designing apps - returns instructions for Claude Code to execute locally.
+
+**Parameters:**
+- `task`: The design task (`create_app`, `update_design`, `add_component`)
+- `input`: Task-specific parameters
+
+**Example Response:**
+```json
+{
+  "workflowId": "create_app_1234567890",
+  "workflow": {
+    "name": "Create App Workflow",
+    "steps": [/* step-by-step instructions */]
+  },
+  "agents": {/* agent templates */},
+  "components": {/* component specs */},
+  "estimatedTokens": 4800
+}
 ```
-Use simple_design_update with request "make the primary color blue"
-Use simple_design_update with request "add a search bar at the top"
-Use simple_design_update with request "change the product grid to 4 columns"
-```
 
-### 👀 `simple_design_preview`
-Get the current status of your design including file locations and features.
+### 🤖 `simple_design_get_agent`
+Get specific agent templates for local execution.
 
-**Example:**
-```
-Use simple_design_preview to see project status
-```
+**Parameters:**
+- `agentName`: Name of the agent (e.g., "DesignBrief", "UXFlow")
+- `action`: Optional specific action
 
-### ⚛️ `simple_design_export_react`
-Convert your HTML design to a production-ready React app.
+### 🧩 `simple_design_get_component`
+Get component specifications for UI building.
 
-**Example:**
-```
-Use simple_design_export_react with projectName "recipe-app-1234"
-```
+**Parameters:**
+- `componentName`: Component to get specs for
+- `appType`: Optional app type for context
 
-## Supported App Types
+## How Commands Work
 
-The AI automatically detects your app type and generates appropriate designs:
+### Creating an App
+**You type:** `/design-app "recipe sharing app"`
 
-- **🍳 Recipe Apps**: Recipe grids, search, categories, upload forms
-- **💪 Fitness Apps**: Workout tracking, progress charts, exercise library
-- **👥 Social Apps**: User profiles, feeds, messaging, notifications
-- **🛍️ E-commerce**: Product catalogs, shopping carts, checkout flows
-- **✅ Productivity**: Task lists, calendars, project boards
-- **📚 And More**: The AI adapts to any app idea!
+**What happens:**
+1. MCP orchestrator analyzes your request
+2. Returns a workflow with:
+   - Design Brief agent template
+   - UX Flow generation instructions
+   - UI component specifications
+   - File structure guidelines
+3. Claude Code executes each step locally
+4. HTML/CSS files created on your machine
+5. No rate limits!
 
-## Design Features
+### Updating a Design
+**You type:** `/update-design "make the header blue"`
+
+**What happens:**
+1. Orchestrator returns change analysis workflow
+2. Claude Code analyzes the change locally
+3. Updates files using your resources
+4. Instant results, no server load
+
+## Architecture Overview
+
+### Core Components
+
+1. **WorkflowOrchestrator** - Main orchestration engine
+2. **AgentTemplates** - Lightweight agent instructions
+3. **ComponentSpecs** - UI component specifications
+4. **WorkflowDefinitions** - Complete workflow structures
+
+### Agent Templates
+- `DesignBrief` - Analyzes app requirements
+- `UXFlow` - Creates screen structure
+- `UIGenerator` - Selects UI components
+- `FileCreator` - Generates file structure
+- `ChangeAnalyzer` - Understands update requests
+- `ComponentIntegrator` - Adds new components
 
 ### Component Library
-- Navigation bars & sidebars
-- Hero sections with images/videos
-- Card layouts & grids
-- Forms & search bars
-- Image galleries & carousels
-- Footers with social links
-- Testimonials & reviews
-- And many more!
+- Navigation: navbar, sidebar
+- Layout: hero, grid, container
+- Content: cards, galleries, testimonials
+- Forms: search, inputs, buttons
+- Data: charts, stats, tables
+- App-specific: recipe cards, workout cards, etc.
 
-### Smart Defaults
-- Mobile-responsive layouts
-- Accessibility-friendly HTML
-- Modern color schemes
-- Professional typography
-- Smooth animations
-- Cross-browser compatibility
+## Installation & Setup
 
-### Live Updates
-- Auto-refreshing preview (every 3 seconds)
-- See changes instantly
-- No build process needed
-- Works with any browser
+1. **Deploy to Railway** (or your preferred platform)
+2. **Import to Commands.com**
+3. **Use with Claude Code**
 
-## Example Workflow
+No local installation needed - it's all orchestrated!
 
-1. **Create Your App**
-   ```
-   /design-app "I want a fitness tracker for gym workouts"
-   ```
-   
-2. **Preview in Browser**
-   - Open `fitness-tracker-5678/index.html`
-   - See your app design live!
+## For Developers
 
-3. **Make Changes**
-   ```
-   /update-design "add a dark mode toggle"
-   /update-design "make the charts bigger"
-   /update-design "add social sharing buttons"
-   ```
+### Testing Locally
+```bash
+npm install
+npm test  # Run orchestrator tests
+```
 
-4. **Export When Ready**
-   ```
-   /export-react fitness-tracker-5678
-   ```
+### Example Integration
+```javascript
+// Get workflow from orchestrator
+const workflow = await mcp.call('simple_design_orchestrate', {
+  task: 'create_app',
+  input: { description: 'fitness app' }
+});
 
-## Technical Details
+// Execute locally in Claude Code
+for (const step of workflow.steps) {
+  await executeStep(step, workflow.agents[step.agent]);
+}
+```
 
-- **No Build Process**: Pure HTML/CSS/JS that works immediately
-- **Local Files**: Everything runs on your machine
-- **Auto-refresh**: Built-in refresh every 3 seconds
-- **Component-based**: Modular design system
-- **Framework-agnostic**: Export to React, or keep as HTML
+## Migration from v2.0
 
-## Requirements
-
-- Commands.com Claude Code integration
-- A web browser to preview designs
-- That's it! No other dependencies
-
-## Getting Started
-
-1. Install from Commands.com:
-   ```
-   claude mcp add simple-design
-   ```
-
-2. Start designing:
-   ```
-   /design-app "describe your app idea here"
-   ```
-
-3. Open the generated HTML file in your browser
-
-4. Make changes and see them live!
+See [MIGRATION.md](MIGRATION.md) for upgrade instructions.
 
 ## Support
 
-- **GitHub**: [github.com/kylegold/simple-design-mcp](https://github.com/kylegold/simple-design-mcp)
-- **Issues**: Please report bugs on GitHub
-- **Updates**: Star the repo for updates!
+- **Issues**: [GitHub Issues](https://github.com/kylegold/simple-design-mcp/issues)
+- **Docs**: See `/examples` folder
+- **Version**: 3.0.0
 
 ---
 
-Built with ❤️ for non-technical builders who want to create amazing apps!
+Built with ❤️ to solve rate limiting and empower local execution!
