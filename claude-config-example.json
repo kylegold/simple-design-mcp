@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "simple-design": {
+      "command": "node",
+      "args": ["/Users/kylegoldfarb/simple-design-mcp/index.js"]
+    }
+  }
+}

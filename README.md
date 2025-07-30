@@ -29,27 +29,49 @@ npm install -g @your-username/simple-design-mcp
 
 ## 🎯 Usage
 
-### 1. Start a Conversation
+### Via Commands.com (Recommended)
+
+Once deployed on Commands.com, you can use it directly in Claude:
 
 ```
-You: I want to build a recipe app for home cooks
-Bot: I love it! A recipe app - perfect for food lovers!
-
-Let me ask a few quick questions to make sure I design exactly what you're envisioning:
-
-1. Who's going to use your recipe app?
-2. What's the main thing they'll do with it?
-3. Any apps you love the look of?
-
-Just answer naturally - I'll handle all the technical stuff! 😊
+Use simple_design_chat to build a recipe app for home cooks
 ```
 
-### 2. Available Commands
+### Local Development
 
-- **`chat`** - Tell me what you want to build or change
-- **`show`** - See your current design
-- **`export`** - Generate the actual app code
-- **`examples`** - Get inspiration from different app types
+1. Clone and install:
+```bash
+git clone https://github.com/kylegold/simple-design-mcp.git
+cd simple-design-mcp
+npm install
+```
+
+2. Run the server:
+```bash
+npm run dev  # Development mode with logging
+npm start    # Production mode
+```
+
+3. Test the endpoints:
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# List tools
+curl http://localhost:3000/mcp/tools
+
+# Start designing
+curl -X POST http://localhost:3000/mcp/tools/chat \
+  -H "Content-Type: application/json" \
+  -d '{"params": {"message": "I want to build a recipe app"}}'
+```
+
+### Available Tools
+
+- **`simple_design_chat`** - Tell me what you want to build or change
+- **`simple_design_show`** - See your current design
+- **`simple_design_export`** - Generate the actual app code
+- **`simple_design_examples`** - Get inspiration from different app types
 
 ### 3. Example Conversations
 

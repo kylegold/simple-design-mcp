@@ -1,0 +1,86 @@
+# MCP Server Configuration for Commands.com
+# This file defines how your MCP server integrates with Commands.com
+
+metadata:
+  version: "1.0"
+  name: "simple-design-mcp"
+  description: "Design beautiful apps without coding - just tell me what you want to build!"
+  author: "Kyle Gold"
+  homepage: "https://github.com/kylegold/simple-design-mcp"
+  license: "MIT"
+
+server:
+  # Basic Configuration
+  serverId: "simple-design"
+  displayName: "Simple Design"
+  description: "Design beautiful React and React Native apps through natural conversation"
+  category: "app-design"
+  capabilities:
+    - "app-design"
+    - "code-generation"
+    - "ui-design"
+    - "react"
+    - "react-native"
+  
+  # Version & Status
+  version: "1.0.0"
+  status: "alpha"
+    
+  # Authentication
+  auth:
+    method: "none"  # No auth required for this service
+      
+  # Deployment Configuration
+  deployment:
+    upstreamUrl: "https://simple-design-mcp.up.railway.app"  # Update with your deployment URL
+        
+  # Tools & Resources  
+  provides:
+    tools:
+      - name: "simple_design_chat"
+        description: "Tell me what you want to build or change - just describe it naturally!"
+        parameters:
+          - name: "message"
+            type: "string"
+            required: true
+            description: "Tell me what you want to build or change"
+          - name: "conversationId"
+            type: "string"
+            required: false
+            description: "Optional conversation ID to continue a previous conversation"
+            
+      - name: "simple_design_show"
+        description: "Show me what we've designed so far"
+        parameters:
+          - name: "conversationId"
+            type: "string"
+            required: false
+            description: "Conversation ID"
+            
+      - name: "simple_design_export"
+        description: "Generate the actual app code when you're ready"
+        parameters:
+          - name: "path"
+            type: "string"
+            required: false
+            description: "Where to export (defaults to current directory)"
+          - name: "conversationId"
+            type: "string"
+            required: false
+            description: "Conversation ID"
+            
+      - name: "simple_design_examples"
+        description: "See examples of different app types for inspiration"
+        parameters:
+          - name: "type"
+            type: "string"
+            required: false
+            description: "Type of app (e.g., 'recipe', 'fitness', 'social')"
+
+# Pricing (Free tier available)
+pricing:
+  type: "free"
+  note: "Free for all users - helping everyone build beautiful apps!"
+
+# Documentation points to README.md
+documentation: "README.md"
