@@ -178,7 +178,7 @@ Which style resonates with your vision?
   }
   
   formatComponents(components) {
-    if (!components || components.length === 0) {
+    if (!components || !Array.isArray(components) || components.length === 0) {
       return '  (No screens designed yet)';
     }
     

@@ -1,6 +1,6 @@
 name: simple-design-mcp
-description: Design beautiful apps without coding - just tell me what you want to build!
-version: 1.0.0
+description: Design beautiful apps without coding - see live HTML preview instantly!
+version: 2.0.0
 author: Kyle Gold
 license: PROPRIETARY
 
@@ -11,7 +11,7 @@ commands:
     category: app-design
     commandName: "/design-app"
     aiPlatform: "claude-code@2025.06"
-    description: Start designing your app by describing what you want to build in plain language. I'll guide you through creating a beautiful, production-ready React or React Native app without any coding knowledge required.
+    description: Start designing your app by describing what you want to build. Creates actual HTML files you can preview in your browser immediately!
     content: command-docs/design.md
     readme: command-docs/README.md
     license: LICENSE
@@ -23,25 +23,49 @@ commands:
         type: text
         required: true
         defaultValue: "a recipe sharing app"
-      - name: target_users
-        label: Who will use it?
-        description: Describe your target users (e.g., "busy parents", "fitness enthusiasts")
+      - name: project_path
+        label: Project Location
+        description: Where to create the project (optional, defaults to current directory)
         type: text
         required: false
-        defaultValue: ""
-      - name: platform
-        label: Platform
-        description: What platform are you building for?
-        type: select
-        required: false
-        defaultValue: "web"
-        options: ["web", "mobile", "both"]
+        defaultValue: "."
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "1.0.0"
+        version: "2.0.0"
         name: "simple-design-mcp"
-        description: "Design beautiful apps without coding"
+        description: "Visual HTML design with live preview"
+
+  - name: update-design
+    title: Update Your Design
+    type: command
+    category: app-design
+    commandName: "/update-design"
+    aiPlatform: "claude-code@2025.06"
+    description: Make changes to your current design - update colors, add components, change layout, etc. See changes instantly in your browser!
+    content: command-docs/update.md
+    readme: command-docs/README.md
+    license: LICENSE
+    thumbnail: command-docs/preview.png
+    inputParameters:
+      - name: change_request
+        label: What would you like to change?
+        description: Describe the change (e.g., "make the header blue", "add a search bar", "change to 3 columns")
+        type: text
+        required: true
+        defaultValue: ""
+      - name: project_name
+        label: Project Name
+        description: Optional - uses most recent project if not specified
+        type: text
+        required: false
+        defaultValue: ""
+    mcpRequirements:
+      - serverId: "simple-design"
+        tier: required
+        version: "2.0.0"
+        name: "simple-design-mcp"
+        description: "Visual HTML design with live preview"
 
   - name: preview-design
     title: Preview Your Design
@@ -49,81 +73,49 @@ commands:
     category: app-design
     commandName: "/preview-design"
     aiPlatform: "claude-code@2025.06"
-    description: See a detailed preview of your app design including colors, UI components, features, and layout. Perfect for reviewing before exporting your code.
+    description: Get the current status of your design including file locations, features, and preview URLs. Shows what you've built so far.
     content: command-docs/preview.md
     readme: command-docs/README.md
     license: LICENSE
     thumbnail: command-docs/preview.png
     inputParameters:
-      - name: conversation_id
-        label: Conversation ID
-        description: Optional ID to continue a previous design session
+      - name: project_name
+        label: Project Name
+        description: Optional - uses most recent project if not specified
         type: text
         required: false
-        defaultValue: "default"
+        defaultValue: ""
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "1.0.0"
+        version: "2.0.0"
         name: "simple-design-mcp"
-        description: "Design beautiful apps without coding"
+        description: "Visual HTML design with live preview"
 
-  - name: export-app
-    title: Export Your App Code
+  - name: export-react
+    title: Export to React
     type: command
     category: app-design
-    commandName: "/export-app"
+    commandName: "/export-react"
     aiPlatform: "claude-code@2025.06"
-    description: Generate production-ready React or React Native code for your designed app. Get a complete project with all dependencies, components, and documentation ready to run.
+    description: Convert your HTML design to a production-ready React app with components, routing, and state management.
     content: command-docs/export.md
     readme: command-docs/README.md
     license: LICENSE
     thumbnail: command-docs/preview.png
     inputParameters:
-      - name: export_path
-        label: Export Location
-        description: Where to save your app (defaults to current directory)
+      - name: project_name
+        label: Project to Export
+        description: Name of the HTML project to convert to React
         type: text
-        required: false
-        defaultValue: "./my-app"
-      - name: conversation_id
-        label: Conversation ID
-        description: Optional ID to export a specific design session
-        type: text
-        required: false
-        defaultValue: "default"
+        required: true
+        defaultValue: ""
     mcpRequirements:
       - serverId: "simple-design"
         tier: required
-        version: "1.0.0"
+        version: "2.0.0"
         name: "simple-design-mcp"
-        description: "Design beautiful apps without coding"
-
-  - name: explore-examples
-    title: Explore App Examples
-    type: command
-    category: app-design
-    commandName: "/explore-examples"
-    aiPlatform: "claude-code@2025.06"
-    description: Get inspired by example designs for different app categories. See what's possible and get ideas for your own app.
-    content: command-docs/examples.md
-    readme: command-docs/README.md
-    license: LICENSE
-    thumbnail: command-docs/preview.png
-    inputParameters:
-      - name: app_type
-        label: App Category
-        description: Type of app to see examples for
-        type: select
-        required: false
-        defaultValue: "all"
-        options: ["all", "recipe", "fitness", "social", "productivity", "learning", "shopping", "finance", "travel", "music", "photo"]
-    mcpRequirements:
-      - serverId: "simple-design"
-        tier: required
-        version: "1.0.0"
-        name: "simple-design-mcp"
-        description: "Design beautiful apps without coding"
+        description: "Visual HTML design with live preview"
 
 metadata:
   created: "2025-07-30"
@@ -135,3 +127,10 @@ metadata:
   minimum_requirements:
     - MCP support
     - No authentication required
+  features:
+    - "Live HTML preview with auto-refresh"
+    - "Visual component library"
+    - "Responsive design templates"
+    - "Smart app type detection"
+    - "Incremental updates"
+    - "React export when ready"
