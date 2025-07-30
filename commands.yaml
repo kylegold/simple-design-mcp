@@ -1,0 +1,137 @@
+name: simple-design-mcp
+description: Design beautiful apps without coding - just tell me what you want to build!
+version: 1.0.0
+author: Kyle Gold
+license: PROPRIETARY
+
+commands:
+  - name: design-app
+    title: Design Your App
+    type: command
+    category: app-design
+    commandName: "/design-app"
+    aiPlatform: "claude-code@2025.06"
+    description: Start designing your app by describing what you want to build in plain language. I'll guide you through creating a beautiful, production-ready React or React Native app without any coding knowledge required.
+    content: command-docs/design.md
+    readme: command-docs/README.md
+    license: LICENSE
+    thumbnail: command-docs/preview.png
+    inputParameters:
+      - name: app_idea
+        label: What do you want to build?
+        description: Describe your app idea in your own words (e.g., "a recipe sharing app for home cooks")
+        type: text
+        required: true
+        defaultValue: "a recipe sharing app"
+      - name: target_users
+        label: Who will use it?
+        description: Describe your target users (e.g., "busy parents", "fitness enthusiasts")
+        type: text
+        required: false
+        defaultValue: ""
+      - name: platform
+        label: Platform
+        description: What platform are you building for?
+        type: select
+        required: false
+        defaultValue: "web"
+        options: ["web", "mobile", "both"]
+    mcpRequirements:
+      - serverId: "simple-design"
+        tier: required
+        version: "1.0.0"
+        name: "simple-design-mcp"
+        description: "Design beautiful apps without coding"
+
+  - name: preview-design
+    title: Preview Your Design
+    type: command
+    category: app-design
+    commandName: "/preview-design"
+    aiPlatform: "claude-code@2025.06"
+    description: See a detailed preview of your app design including colors, UI components, features, and layout. Perfect for reviewing before exporting your code.
+    content: command-docs/preview.md
+    readme: command-docs/README.md
+    license: LICENSE
+    thumbnail: command-docs/preview.png
+    inputParameters:
+      - name: conversation_id
+        label: Conversation ID
+        description: Optional ID to continue a previous design session
+        type: text
+        required: false
+        defaultValue: "default"
+    mcpRequirements:
+      - serverId: "simple-design"
+        tier: required
+        version: "1.0.0"
+        name: "simple-design-mcp"
+        description: "Design beautiful apps without coding"
+
+  - name: export-app
+    title: Export Your App Code
+    type: command
+    category: app-design
+    commandName: "/export-app"
+    aiPlatform: "claude-code@2025.06"
+    description: Generate production-ready React or React Native code for your designed app. Get a complete project with all dependencies, components, and documentation ready to run.
+    content: command-docs/export.md
+    readme: command-docs/README.md
+    license: LICENSE
+    thumbnail: command-docs/preview.png
+    inputParameters:
+      - name: export_path
+        label: Export Location
+        description: Where to save your app (defaults to current directory)
+        type: text
+        required: false
+        defaultValue: "./my-app"
+      - name: conversation_id
+        label: Conversation ID
+        description: Optional ID to export a specific design session
+        type: text
+        required: false
+        defaultValue: "default"
+    mcpRequirements:
+      - serverId: "simple-design"
+        tier: required
+        version: "1.0.0"
+        name: "simple-design-mcp"
+        description: "Design beautiful apps without coding"
+
+  - name: explore-examples
+    title: Explore App Examples
+    type: command
+    category: app-design
+    commandName: "/explore-examples"
+    aiPlatform: "claude-code@2025.06"
+    description: Get inspired by example designs for different app categories. See what's possible and get ideas for your own app.
+    content: command-docs/examples.md
+    readme: command-docs/README.md
+    license: LICENSE
+    thumbnail: command-docs/preview.png
+    inputParameters:
+      - name: app_type
+        label: App Category
+        description: Type of app to see examples for
+        type: select
+        required: false
+        defaultValue: "all"
+        options: ["all", "recipe", "fitness", "social", "productivity", "learning", "shopping", "finance", "travel", "music", "photo"]
+    mcpRequirements:
+      - serverId: "simple-design"
+        tier: required
+        version: "1.0.0"
+        name: "simple-design-mcp"
+        description: "Design beautiful apps without coding"
+
+metadata:
+  created: "2025-07-30"
+  updated: "2025-07-30"
+  total_commands: 4
+  supported_platforms:
+    - claude-code
+    - claude
+  minimum_requirements:
+    - MCP support
+    - No authentication required

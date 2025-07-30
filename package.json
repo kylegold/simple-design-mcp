@@ -21,7 +21,7 @@
     "react-native"
   ],
   "author": "Kyle Gold",
-  "license": "MIT",
+  "license": "PROPRIETARY",
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",

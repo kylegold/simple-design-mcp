@@ -7,7 +7,7 @@ metadata:
   description: "Design beautiful apps without coding - just tell me what you want to build!"
   author: "Kyle Gold"
   homepage: "https://github.com/kylegold/simple-design-mcp"
-  license: "MIT"
+  license: "PROPRIETARY"
 
 server:
   # Basic Configuration
