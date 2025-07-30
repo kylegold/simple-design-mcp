@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { WorkflowOrchestrator } from './src/orchestrator/WorkflowOrchestrator.js';
+import { createLightweightResponse } from './src/orchestrator/LightweightResponse.js';
 import { verifyJwt } from './src/auth/verifyToken.js';
 
 // Load environment variables
@@ -197,8 +198,8 @@ async function handleTool(toolName, params, user) {
         // Get the workflow from orchestrator
         const workflow = orchestrator.orchestrate(params.task, params.input);
         
-        // Return workflow as JSON for Claude Code to execute
-        return JSON.stringify(workflow, null, 2);
+        // Return lightweight version to avoid overwhelming the client
+        return createLightweightResponse(workflow);
       }
       
       case 'simple_design_get_agent': {
@@ -211,11 +212,11 @@ async function handleTool(toolName, params, user) {
         
         const action = params.action ? agent[params.action] : agent;
         
-        return JSON.stringify({
+        return {
           agentName: params.agentName,
           action: params.action || 'all',
           template: action
-        }, null, 2);
+        };
       }
       
       case 'simple_design_get_component': {
@@ -231,17 +232,17 @@ async function handleTool(toolName, params, user) {
             throw new Error(`Unknown component: ${params.componentName}`);
           }
           
-          return JSON.stringify({
+          return {
             componentName: params.componentName,
             appType: params.appType,
             specification: appComponent
-          }, null, 2);
+          };
         }
         
-        return JSON.stringify({
+        return {
           componentName: params.componentName,
           specification: component
-        }, null, 2);
+        };
       }
       
       default:
@@ -398,7 +399,26 @@ app.post('/', async (req, res) => {
         try {
           const result = await handleTool(toolName, toolArgs || {}, req.user);
           
-          const toolResult = {
+          // Log result size for debugging
+          const resultSize = JSON.stringify(result).length;
+          if (isDevelopment) {
+            console.log(`[MCP] Tool result size: ${resultSize} bytes`);
+          }
+          
+          // Warn if response is too large
+          if (resultSize > 50000) {
+            console.warn(`[MCP] Large response detected: ${resultSize} bytes for ${toolName}`);
+          }
+          
+          // If result is an object, wrap it properly for MCP
+          const toolResult = typeof result === 'object' ? {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(result, null, 2)
+              }
+            ]
+          } : {
             content: [
               {
                 type: 'text',
