@@ -28,7 +28,10 @@ server:
     
   # Authentication
   auth:
-    method: "none"  # No auth required for this service
+    method: "oauth"
+    oauth:
+      scopes: "read:user"
+      audience: "commands.com"
       
   # Deployment Configuration
   deployment:

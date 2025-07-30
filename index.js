@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { ConversationAgent } from './src/agents/ConversationAgent.js';
 import { DesignAgent } from './src/agents/DesignAgent.js';
 import { CodeGenerator } from './src/agents/CodeGenerator.js';
+import { verifyJwt } from './src/auth/verifyToken.js';
 
 // Load environment variables
 dotenv.config();
@@ -245,8 +246,8 @@ app.get('/mcp/tools', (req, res) => {
   });
 });
 
-// POST /mcp/tools/:toolName - Direct tool execution
-app.post('/mcp/tools/:toolName', async (req, res) => {
+// POST /mcp/tools/:toolName - Direct tool execution (with auth)
+app.post('/mcp/tools/:toolName', verifyJwt, async (req, res) => {
   const { toolName } = req.params;
   const { params = {} } = req.body;
   
