@@ -14,13 +14,14 @@ dotenv.config();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000');
+const HOST = process.env.HOST || '0.0.0.0';
 const isDevelopment = process.env.NODE_ENV === 'development';
-const skipAuth = process.env.SKIP_AUTH === 'true';
+const skipAuth = process.env.SKIP_AUTH === 'true' && isDevelopment;
 
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: isDevelopment ? '*' : ['https://commands.com', 'https://api.commands.com'],
+  origin: ['https://commands.com', 'https://api.commands.com'],
   credentials: true
 }));
 
@@ -35,10 +36,10 @@ const conversationAgent = new ConversationAgent();
 const designAgent = new DesignAgent();
 const codeGenerator = new CodeGenerator();
 
-// Tool definitions
+// Tool definitions for MCP
 const tools = [
   {
-    name: 'chat',
+    name: 'simple_design_chat',
     description: 'Tell me what you want to build or change - just describe it naturally!',
     inputSchema: {
       type: 'object',
@@ -53,50 +54,10 @@ const tools = [
         }
       },
       required: ['message']
-    },
-    handler: async (params) => {
-      const { message, conversationId = 'default' } = params;
-      
-      // Get or create conversation state
-      let conversation = conversations.get(conversationId);
-      if (!conversation) {
-        conversation = {
-          project: null,
-          history: []
-        };
-        conversations.set(conversationId, conversation);
-      }
-      
-      // Add to conversation history
-      conversation.history.push({ role: 'user', message });
-      
-      // Process with conversation agent
-      const response = await conversationAgent.process(
-        message, 
-        conversation.project, 
-        conversation.history
-      );
-      
-      // Update project state if needed
-      if (response.projectUpdate) {
-        conversation.project = { 
-          ...conversation.project, 
-          ...response.projectUpdate 
-        };
-      }
-      
-      // Add agent response to history
-      conversation.history.push({ role: 'assistant', message: response.message });
-      
-      return {
-        message: response.message,
-        conversationId,
-        project: conversation.project
-      };
     }
   },
   {
-    name: 'show',
+    name: 'simple_design_show',
     description: 'Show me what we\'ve designed so far',
     inputSchema: {
       type: 'object',
@@ -106,23 +67,10 @@ const tools = [
           description: 'Conversation ID'
         }
       }
-    },
-    handler: async (params) => {
-      const { conversationId = 'default' } = params;
-      const conversation = conversations.get(conversationId);
-      
-      if (!conversation || !conversation.project) {
-        return {
-          preview: 'No project started yet! Tell me what you\'d like to build first.'
-        };
-      }
-      
-      const preview = await designAgent.generatePreview(conversation.project);
-      return { preview };
     }
   },
   {
-    name: 'export',
+    name: 'simple_design_export',
     description: 'Generate the actual app code when you\'re ready',
     inputSchema: {
       type: 'object',
@@ -136,32 +84,10 @@ const tools = [
           description: 'Conversation ID'
         }
       }
-    },
-    handler: async (params) => {
-      const { path: exportPath, conversationId = 'default' } = params;
-      const conversation = conversations.get(conversationId);
-      
-      if (!conversation || !conversation.project) {
-        return {
-          error: 'No project to export yet! Start by telling me what you want to build.'
-        };
-      }
-      
-      const projectPath = exportPath || `./${conversation.project.name}`;
-      const files = await codeGenerator.generateProject(
-        conversation.project, 
-        projectPath
-      );
-      
-      return {
-        message: `✨ Your app is ready!\n\nCreated at: ${projectPath}\n\nTo run your app:\n\`\`\`bash\ncd ${projectPath}\nnpm install\nnpm start\n\`\`\`\n\nFiles created:\n${files.map(f => `  - ${f}`).join('\n')}\n\nYour app is production-ready with:\n- Clean, modular components\n- Modern UI library (${conversation.project.uiLibrary})\n- Responsive design\n- Accessibility built-in\n\nHappy building! 🚀`,
-        projectPath,
-        files
-      };
     }
   },
   {
-    name: 'examples',
+    name: 'simple_design_examples',
     description: 'See examples of different app types for inspiration',
     inputSchema: {
       type: 'object',
@@ -171,14 +97,25 @@ const tools = [
           description: 'Type of app (e.g., \'recipe\', \'fitness\', \'social\')'
         }
       }
-    },
-    handler: async (params) => {
-      const { type } = params;
-      const examples = await designAgent.getExamples(type);
-      return { examples };
     }
   }
 ];
+
+// Helper function to send streaming responses for SSE-enabled gateways
+function sendStreamingResponse(res, result, id) {
+  // Set headers for SSE streaming
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // Send the complete JSON-RPC response as a single SSE event
+  const response = { jsonrpc: '2.0', result, id };
+  res.write(`data: ${JSON.stringify(response)}\n\n`);
+  
+  // End the response
+  res.end();
+}
 
 // Request logging (only in development)
 if (isDevelopment) {
@@ -201,20 +138,20 @@ app.get('/health', async (req, res) => {
 // MCP discovery endpoint
 app.get('/.well-known/mcp.json', (req, res) => {
   res.json({
-    schemaVersion: '2024-11-05',
-    vendor: 'Commands.com',
-    name: 'simple-design-mcp',
-    version: '1.0.0',
-    description: 'Design beautiful apps without coding - just tell me what you want to build!',
-    license: 'MIT',
+    schemaVersion: "2024-11-05",
+    vendor: "Commands.com",
+    name: "simple-design-mcp",
+    version: "1.0.0",
+    description: "Design beautiful apps without coding - just tell me what you want to build!",
+    license: "PROPRIETARY",
     capabilities: {
       tools: {
         listChanged: true
       }
     },
     serverInfo: {
-      name: 'simple-design-mcp',
-      version: '1.0.0'
+      name: "simple-design-mcp",
+      version: "1.0.0"
     }
   });
 });
@@ -222,72 +159,372 @@ app.get('/.well-known/mcp.json', (req, res) => {
 // Root endpoint with basic info
 app.get('/', (req, res) => {
   res.json({
-    name: 'simple-design-mcp',
-    description: 'Design beautiful apps without coding - just tell me what you want to build!',
-    version: '1.0.0',
+    name: "simple-design-mcp",
+    description: "Design beautiful apps without coding - just tell me what you want to build!",
+    version: "1.0.0",
     endpoints: {
       health: '/health',
-      discovery: '/.well-known/mcp.json',
-      tools: '/mcp/tools',
-      execute: '/mcp/tools/:toolName'
+      discovery: '/.well-known/mcp.json'
     },
     tools: tools.map(tool => `${tool.name} - ${tool.description}`)
   });
 });
 
-// GET /mcp/tools - Tool discovery endpoint
-app.get('/mcp/tools', (req, res) => {
-  res.json({
-    tools: tools.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema
-    }))
-  });
-});
+// Define authentication middleware
+const authMiddleware = skipAuth ? 
+  (req, res, next) => {
+    if (isDevelopment) {
+      console.log('Authentication: DISABLED (dev mode)');
+    }
+    // Mock user for development
+    req.user = {
+      sub: 'dev-user',
+      email: 'dev@example.com',
+      scope: 'read:user'
+    };
+    next();
+  } : 
+  verifyJwt;
 
-// POST /mcp/tools/:toolName - Direct tool execution (with auth)
-app.post('/mcp/tools/:toolName', verifyJwt, async (req, res) => {
-  const { toolName } = req.params;
-  const { params = {} } = req.body;
+// Tool handler functions
+async function handleTool(toolName, params, user) {
+  const conversationId = params.conversationId || 'default';
   
-  // Log REST API calls in development
+  switch (toolName) {
+    case 'simple_design_chat':
+      if (!params.message) {
+        throw new Error('Message is required');
+      }
+      
+      // Get or create conversation
+      let conversation = conversations.get(conversationId);
+      if (!conversation) {
+        conversation = {
+          id: conversationId,
+          messages: [],
+          designState: null
+        };
+        conversations.set(conversationId, conversation);
+      }
+      
+      // Process the message through our agents
+      const analysisResult = await conversationAgent.analyzeDescription(params.message);
+      
+      if (analysisResult.needsDesign) {
+        // Generate design
+        const designResult = await designAgent.generateDesign(analysisResult);
+        conversation.designState = designResult;
+        conversation.messages.push({
+          type: 'user',
+          content: params.message,
+          timestamp: new Date().toISOString()
+        });
+        conversation.messages.push({
+          type: 'assistant',
+          content: designResult.summary,
+          timestamp: new Date().toISOString()
+        });
+        
+        return `Great! I've designed your ${analysisResult.appType} app. Here's what I created:
+
+${designResult.summary}
+
+Key features:
+${designResult.features.map(f => `• ${f}`).join('\n')}
+
+Screens designed:
+${designResult.components && designResult.components.length > 0 
+  ? designResult.components.map(c => `• ${c.name}: ${c.purpose}`).join('\n')
+  : '• (Design in progress...)'}
+
+Use "Show Design" to see the full details, or tell me what you'd like to change!`;
+      } else {
+        // Just conversation
+        conversation.messages.push({
+          type: 'user',
+          content: params.message,
+          timestamp: new Date().toISOString()
+        });
+        
+        const response = `I understand you want to work on: ${analysisResult.intent}
+
+Could you tell me more about what type of app you'd like to build? For example:
+• A recipe app for sharing cooking ideas
+• A fitness tracker for workouts
+• A social app for connecting with friends
+• A productivity app for task management
+
+The more details you give me, the better I can design it for you!`;
+        
+        conversation.messages.push({
+          type: 'assistant',
+          content: response,
+          timestamp: new Date().toISOString()
+        });
+        
+        return response;
+      }
+      
+    case 'simple_design_show':
+      const showConversation = conversations.get(conversationId);
+      if (!showConversation || !showConversation.designState) {
+        return "No design created yet. Start by telling me what you want to build!";
+      }
+      
+      const design = showConversation.designState;
+      return `## ${design.appName || 'Your App'}
+
+**Type:** ${design.appType}
+**Platform:** ${design.platform}
+
+**Description:**
+${design.description}
+
+**Key Features:**
+${design.features.map(f => `• ${f}`).join('\n')}
+
+**User Experience Flow:**
+${design.userFlow}
+
+**Screens & Components:**
+${designAgent.formatComponents(design.components)}
+
+**Technical Stack:**
+• Frontend: ${design.techStack.frontend}
+• Styling: ${design.techStack.styling}
+• State: ${design.techStack.state}
+• Navigation: ${design.techStack.navigation}`;
+
+    case 'simple_design_export':
+      const exportConversation = conversations.get(conversationId);
+      if (!exportConversation || !exportConversation.designState) {
+        return "No design to export. Start by telling me what you want to build!";
+      }
+      
+      const exportPath = params.path || './my-app';
+      const generatedCode = await codeGenerator.generateApp(exportConversation.designState, exportPath);
+      
+      return `✅ App code generated successfully!
+
+**Generated files:**
+${generatedCode.files.map(f => `• ${f.path}`).join('\n')}
+
+**Next steps:**
+1. Navigate to: cd ${exportPath}
+2. Install dependencies: npm install
+3. Start development: npm start
+
+Your ${exportConversation.designState.platform} app is ready to run!`;
+
+    case 'simple_design_examples':
+      const appType = params.type || 'general';
+      const examples = {
+        recipe: "🍳 Recipe App Example:\n• Browse recipes by cuisine\n• Save favorites\n• Shopping list generator\n• Step-by-step cooking mode",
+        fitness: "💪 Fitness App Example:\n• Workout tracking\n• Progress photos\n• Exercise library\n• Personal trainer chat",
+        social: "👥 Social App Example:\n• User profiles\n• Photo/video sharing\n• Comments and likes\n• Direct messaging",
+        general: "Here are some popular app types I can help you design:\n• Recipe apps\n• Fitness trackers\n• Social networks\n• E-commerce stores\n• Productivity tools\n\nJust tell me what you want to build!"
+      };
+      
+      return examples[appType] || examples.general;
+      
+    default:
+      throw new Error(`Unknown tool: ${toolName}`);
+  }
+}
+
+// Main JSON-RPC endpoint
+app.post('/', authMiddleware, async (req, res) => {
+  // Check if client supports SSE
+  const acceptsSSE = req.headers.accept?.includes('text/event-stream');
+  
+  // All requests must be authenticated (or in dev mode)
+  if (!req.user && !skipAuth) {
+    return res.status(401).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32600,
+        message: 'Authentication required'
+      },
+      id: null
+    });
+  }
+  
+  // Handle JSON-RPC request
+  const { method, params, id, jsonrpc } = req.body;
+  
+  // Log requests in development
   if (isDevelopment) {
-    console.log(`[REST] Tool execution: ${toolName} with params:`, params);
+    console.log(`[MCP] JSON-RPC Request: method=${method}, id=${id}, user=${req.user?.email || req.user?.sub}`);
+  }
+  
+  if (jsonrpc !== '2.0') {
+    return res.status(400).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32600,
+        message: 'Invalid Request - jsonrpc must be "2.0"'
+      },
+      id: id || null
+    });
   }
   
   try {
-    // Find the tool
-    const tool = tools.find(t => t.name === toolName);
-    if (!tool) {
-      return res.status(404).json({
-        error: {
-          code: 404,
-          message: `Tool '${toolName}' not found`
+    switch (method) {
+      case 'initialize':
+        return res.json({
+          jsonrpc: '2.0',
+          result: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: {
+                listChanged: true
+              }
+            },
+            serverInfo: {
+              name: 'simple-design-mcp',
+              version: '1.0.0'
+            }
+          },
+          id
+        });
+        
+      case 'notifications/initialized':
+        // Notification - no response needed
+        return res.status(200).end();
+        
+      case 'tools/list':
+        const toolsResult = {
+          tools: tools.map(tool => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema
+          }))
+        };
+        
+        // Use SSE if client supports it
+        if (acceptsSSE) {
+          return sendStreamingResponse(res, toolsResult, id);
         }
-      });
+        
+        return res.json({
+          jsonrpc: '2.0',
+          result: toolsResult,
+          id
+        });
+        
+      case 'resources/list':
+        const resourcesResult = {
+          resources: []
+        };
+        
+        // Use SSE if client supports it
+        if (acceptsSSE) {
+          return sendStreamingResponse(res, resourcesResult, id);
+        }
+        
+        return res.json({
+          jsonrpc: '2.0',
+          result: resourcesResult,
+          id
+        });
+        
+      case 'prompts/list':
+        const promptsResult = {
+          prompts: []
+        };
+        
+        // Use SSE if client supports it
+        if (acceptsSSE) {
+          return sendStreamingResponse(res, promptsResult, id);
+        }
+        
+        return res.json({
+          jsonrpc: '2.0',
+          result: promptsResult,
+          id
+        });
+        
+      case 'tools/call':
+        // Handle tool execution
+        const { name: toolName, arguments: toolArgs } = params;
+        
+        // Log tool calls in development
+        if (isDevelopment) {
+          console.log(`[MCP] Tool call: ${toolName} with args:`, toolArgs);
+        }
+        
+        try {
+          const result = await handleTool(toolName, toolArgs || {}, req.user);
+          
+          // Format response according to MCP spec
+          const toolResult = {
+            content: [
+              {
+                type: 'text',
+                text: result
+              }
+            ]
+          };
+          
+          // Use SSE if client supports it
+          if (acceptsSSE) {
+            return sendStreamingResponse(res, toolResult, id);
+          }
+          
+          return res.json({
+            jsonrpc: '2.0',
+            result: toolResult,
+            id
+          });
+        } catch (toolError) {
+          console.error(`Tool execution error for ${toolName}:`, toolError);
+          return res.json({
+            jsonrpc: '2.0',
+            error: {
+              code: -32603,
+              message: `Tool execution failed: ${toolError.message}`
+            },
+            id
+          });
+        }
+        
+      default:
+        return res.status(404).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32601,
+            message: `Method not found: ${method}`
+          },
+          id: id || null
+        });
     }
-    
-    // Execute the tool
-    const result = await tool.handler(params);
-    
-    // Return the result
-    res.json({ result });
-    
   } catch (error) {
-    console.error(`Error executing tool ${toolName}:`, error);
-    res.status(500).json({
+    console.error('JSON-RPC handler error:', error);
+    return res.status(500).json({
+      jsonrpc: '2.0',
       error: {
-        code: 500,
-        message: error.message || 'Internal server error'
-      }
+        code: -32603,
+        message: 'Internal error'
+      },
+      id: id || null
     });
   }
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: {
+      code: 404,
+      message: 'Endpoint not found',
+      path: req.originalUrl
+    }
+  });
+});
+
+// Error handler
+app.use((error, req, res, next) => {
+  console.error('Unhandled error:', error);
   res.status(500).json({
     error: {
       code: 500,
@@ -297,10 +534,15 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`Simple Design MCP Server running on ${HOST}:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`MCP discovery: http://localhost:${PORT}/.well-known/mcp.json`);
-  console.log(`Environment: ${isDevelopment ? 'development' : 'production'}`);
+  
+  if (isDevelopment) {
+    console.log(`Available tools: ${tools.map(t => t.name).join(', ')}`);
+    console.log(`Authentication: ${skipAuth ? 'DISABLED (dev mode)' : 'ENABLED'}`);
+    console.log(`Health check: http://${HOST}:${PORT}/health`);
+    console.log(`MCP Discovery: http://${HOST}:${PORT}/.well-known/mcp.json`);
+  }
 });
+
+export default app;
