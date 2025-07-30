@@ -23,8 +23,9 @@ server:
     - "react-native"
   
   # Version & Status
-  version: "3.0.0"
+  version: "3.1.0"
   status: "beta"
+  protocolVersion: "2025-06-18"
     
   # Authentication
   auth:
@@ -40,8 +41,8 @@ server:
   # Tools & Resources  
   provides:
     tools:
-      - name: "simple_design_orchestrate"
-        description: "Get a workflow for designing apps - returns instructions for Claude Code to execute locally"
+      - name: "simple_design_start"
+        description: "Start a new design workflow session"
         parameters:
           - name: "task"
             type: "string"
@@ -52,29 +53,53 @@ server:
             required: true
             description: "Task-specific input parameters"
             
-      - name: "simple_design_get_agent"
-        description: "Get a specific agent template for local execution"
+      - name: "simple_design_next_step"
+        description: "Get the next step in the workflow"
         parameters:
-          - name: "agentName"
+          - name: "sessionId"
             type: "string"
             required: true
-            description: "Name of the agent template to retrieve"
+            description: "The workflow session ID"
+            
+      - name: "simple_design_get_prompt"
+        description: "Get the prompt for a specific agent action"
+        parameters:
+          - name: "sessionId"
+            type: "string"
+            required: true
+            description: "The workflow session ID"
+          - name: "agent"
+            type: "string"
+            required: true
+            description: "Name of the agent"
           - name: "action"
             type: "string"
-            required: false
-            description: "The action method to get"
+            required: true
+            description: "The action to get prompt for"
+            
+      - name: "simple_design_get_template"
+        description: "Get code template for current step"
+        parameters:
+          - name: "sessionId"
+            type: "string"
+            required: true
+            description: "The workflow session ID"
+          - name: "templateType"
+            type: "string"
+            required: true
+            description: "Type of template to retrieve"
             
       - name: "simple_design_get_component"
         description: "Get component specifications for UI building"
         parameters:
+          - name: "sessionId"
+            type: "string"
+            required: true
+            description: "The workflow session ID"
           - name: "componentName"
             type: "string"
             required: true
             description: "Name of the component to get specs for"
-          - name: "appType"
-            type: "string"
-            required: false
-            description: "App type for context-specific components"
 
 # Pricing (Free tier available)
 pricing:

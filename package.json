@@ -1,6 +1,6 @@
 {
   "name": "@kylegold/simple-design-mcp",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "Simple Design MCP Orchestrator - Orchestrates app design workflows for Claude Code local execution",
   "main": "index.js",
   "type": "module",

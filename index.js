@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { WorkflowOrchestrator } from './src/orchestrator/WorkflowOrchestrator.js';
 import { createLightweightResponse } from './src/orchestrator/LightweightResponse.js';
+import { WorkflowSessionManager } from './src/orchestrator/WorkflowSessionManager.js';
 import { verifyJwt } from './src/auth/verifyToken.js';
 
 // Load environment variables
@@ -26,14 +27,15 @@ app.use(cors({
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
 
-// Initialize workflow orchestrator
+// Initialize workflow orchestrator and session manager
 const orchestrator = new WorkflowOrchestrator();
+const sessionManager = new WorkflowSessionManager(orchestrator);
 
-// Tool definitions for MCP - Now orchestration tools
+// Tool definitions for MCP - Simple tools for Commands.com compatibility
 const tools = [
   {
-    name: 'simple_design_orchestrate',
-    description: 'Get a workflow for designing apps - returns instructions for Claude Code to execute locally',
+    name: 'simple_design_start',
+    description: 'Start a new design workflow session',
     inputSchema: {
       type: 'object',
       properties: {
@@ -73,21 +75,57 @@ const tools = [
     }
   },
   {
-    name: 'simple_design_get_agent',
-    description: 'Get a specific agent template for local execution',
+    name: 'simple_design_next_step',
+    description: 'Get the next step in the workflow',
     inputSchema: {
       type: 'object',
       properties: {
-        agentName: {
+        sessionId: {
           type: 'string',
-          description: 'Name of the agent template to retrieve'
+          description: 'The workflow session ID'
+        }
+      },
+      required: ['sessionId']
+    }
+  },
+  {
+    name: 'simple_design_get_prompt',
+    description: 'Get the prompt for a specific agent action',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: {
+          type: 'string',
+          description: 'The workflow session ID'
+        },
+        agent: {
+          type: 'string',
+          description: 'Name of the agent'
         },
         action: {
           type: 'string',
-          description: 'The action method to get'
+          description: 'The action to get prompt for'
         }
       },
-      required: ['agentName']
+      required: ['sessionId', 'agent', 'action']
+    }
+  },
+  {
+    name: 'simple_design_get_template',
+    description: 'Get code template for current step',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        sessionId: {
+          type: 'string',
+          description: 'The workflow session ID'
+        },
+        templateType: {
+          type: 'string',
+          description: 'Type of template to retrieve'
+        }
+      },
+      required: ['sessionId', 'templateType']
     }
   },
   {
@@ -96,16 +134,16 @@ const tools = [
     inputSchema: {
       type: 'object',
       properties: {
+        sessionId: {
+          type: 'string',
+          description: 'The workflow session ID'
+        },
         componentName: {
           type: 'string',
           description: 'Name of the component to get specs for'
-        },
-        appType: {
-          type: 'string',
-          description: 'App type for context-specific components'
         }
       },
-      required: ['componentName']
+      required: ['sessionId', 'componentName']
     }
   }
 ];
@@ -136,7 +174,7 @@ app.get('/health', async (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     server: 'simple-design-mcp-orchestrator',
-    version: '3.0.0'
+    version: '3.1.0'
   });
 });
 
@@ -146,7 +184,7 @@ app.get('/.well-known/mcp.json', (req, res) => {
     schemaVersion: "2024-11-05",
     vendor: "Commands.com",
     name: "simple-design-mcp-orchestrator",
-    version: "3.0.0",
+    version: "3.1.0",
     description: "Orchestrates app design workflows for Claude Code local execution",
     license: "PROPRIETARY",
     capabilities: {
@@ -158,20 +196,6 @@ app.get('/.well-known/mcp.json', (req, res) => {
       name: "simple-design-mcp-orchestrator",
       version: "3.0.0"
     }
-  });
-});
-
-// Root endpoint with basic info
-app.get('/', (req, res) => {
-  res.json({
-    name: "simple-design-mcp-orchestrator",
-    description: "Orchestrates app design workflows for Claude Code local execution",
-    version: "3.0.0",
-    endpoints: {
-      health: '/health',
-      discovery: '/.well-known/mcp.json'
-    },
-    tools: tools.map(tool => `${tool.name} - ${tool.description}`)
   });
 });
 
@@ -190,42 +214,183 @@ const authMiddleware = skipAuth ?
   } : 
   verifyJwt;
 
-// Tool handler functions - Now returns workflows instead of executing
+// Root endpoint with basic info
+app.get('/', (req, res) => {
+  res.json({
+    name: "simple-design-mcp-orchestrator",
+    description: "Orchestrates app design workflows for Claude Code local execution",
+    version: "3.1.0",
+    endpoints: {
+      health: '/health',
+      discovery: '/.well-known/mcp.json',
+      tools: '/mcp/tools',
+      execute: '/mcp/tools/:toolName'
+    },
+    tools: tools.map(tool => `${tool.name} - ${tool.description}`)
+  });
+});
+
+// REST API endpoints for Commands.com compatibility
+// GET /mcp/tools - Tool discovery endpoint
+app.get('/mcp/tools', (req, res) => {
+  res.json({
+    tools: tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema
+    }))
+  });
+});
+
+// POST /mcp/tools/:toolName - Direct tool execution
+app.post('/mcp/tools/:toolName', authMiddleware, async (req, res) => {
+  const { toolName } = req.params;
+  const { params = {} } = req.body;
+  
+  // Log REST API calls in development
+  if (isDevelopment) {
+    console.log(`[REST] Tool execution: ${toolName} with params:`, params);
+  }
+  
+  try {
+    const result = await handleTool(toolName, params, req.user);
+    res.json({ result });
+  } catch (error) {
+    console.error(`Error executing tool ${toolName}:`, error);
+    res.status(error.message.includes('not found') ? 404 : 500).json({
+      error: {
+        code: error.message.includes('not found') ? 404 : 500,
+        message: error.message,
+        data: { tool: toolName }
+      }
+    });
+  }
+});
+
+// Tool handler functions - Simple responses for Commands.com compatibility
 async function handleTool(toolName, params, user) {
   try {
     switch (toolName) {
-      case 'simple_design_orchestrate': {
-        // Get the workflow from orchestrator
-        const workflow = orchestrator.orchestrate(params.task, params.input);
-        
-        // Return lightweight version to avoid overwhelming the client
-        return createLightweightResponse(workflow);
-      }
-      
-      case 'simple_design_get_agent': {
-        // Get specific agent template
-        const agent = orchestrator.agentTemplates[params.agentName];
-        
-        if (!agent) {
-          throw new Error(`Unknown agent: ${params.agentName}`);
-        }
-        
-        const action = params.action ? agent[params.action] : agent;
+      case 'simple_design_start': {
+        // Create a new workflow session
+        const sessionId = sessionManager.createSession(params.task, params.input);
+        const session = sessionManager.getSession(sessionId);
         
         return {
-          agentName: params.agentName,
-          action: params.action || 'all',
-          template: action
+          sessionId,
+          task: params.task,
+          totalSteps: session.workflow.steps.length,
+          status: 'ready',
+          description: session.workflow.description,
+          estimatedTime: `${session.workflow.steps.length * 2} minutes`
+        };
+      }
+      
+      case 'simple_design_next_step': {
+        // Get the next step in the workflow
+        const session = sessionManager.getSession(params.sessionId);
+        if (!session) {
+          throw new Error('Session not found or expired');
+        }
+        
+        if (session.currentStep >= session.workflow.steps.length) {
+          sessionManager.completeSession(params.sessionId);
+          return {
+            stepNumber: session.currentStep,
+            status: 'completed',
+            message: 'Workflow completed successfully',
+            hasMore: false
+          };
+        }
+        
+        const step = session.workflow.steps[session.currentStep];
+        sessionManager.updateSession(params.sessionId, { 
+          currentStep: session.currentStep + 1 
+        });
+        
+        return {
+          stepNumber: session.currentStep + 1,
+          stepName: step.name,
+          agent: step.agent,
+          action: step.action,
+          description: step.description,
+          hasMore: session.currentStep + 1 < session.workflow.steps.length
+        };
+      }
+      
+      case 'simple_design_get_prompt': {
+        // Get prompt for specific agent action
+        const session = sessionManager.getSession(params.sessionId);
+        if (!session) {
+          throw new Error('Session not found or expired');
+        }
+        
+        const agent = session.orchestrationResult.agents[params.agent];
+        if (!agent) {
+          throw new Error(`Unknown agent: ${params.agent}`);
+        }
+        
+        const prompt = agent[params.action];
+        if (!prompt) {
+          throw new Error(`Unknown action ${params.action} for agent ${params.agent}`);
+        }
+        
+        // Inject context into prompt
+        const contextualPrompt = prompt
+          .replace('{context}', JSON.stringify(session.context))
+          .replace('{projectName}', session.context.projectName)
+          .replace('{appType}', session.context.appType)
+          .replace('{description}', session.input.description || '')
+          .replace('{request}', session.input.request || '');
+        
+        return {
+          prompt: contextualPrompt,
+          agent: params.agent,
+          action: params.action
+        };
+      }
+      
+      case 'simple_design_get_template': {
+        // Get code template
+        const session = sessionManager.getSession(params.sessionId);
+        if (!session) {
+          throw new Error('Session not found or expired');
+        }
+        
+        // Get template based on type
+        let template;
+        switch (params.templateType) {
+          case 'package.json':
+            template = orchestrator.getPackageTemplate(session.context.appType);
+            break;
+          case 'component':
+            template = orchestrator.getComponentTemplate(params.componentName);
+            break;
+          default:
+            template = orchestrator.getProjectTemplate(session.context.appType)[params.templateType];
+        }
+        
+        if (!template) {
+          throw new Error(`Unknown template type: ${params.templateType}`);
+        }
+        
+        return {
+          templateType: params.templateType,
+          template: typeof template === 'string' ? template : JSON.stringify(template, null, 2)
         };
       }
       
       case 'simple_design_get_component': {
         // Get component specification
-        const component = orchestrator.getComponentTemplate(params.componentName);
+        const session = sessionManager.getSession(params.sessionId);
+        if (!session) {
+          throw new Error('Session not found or expired');
+        }
         
+        const component = orchestrator.getComponentTemplate(params.componentName);
         if (!component) {
-          // Try to get app-specific component
-          const appComponents = orchestrator.getComponentSpecs(params.appType || 'general');
+          // Try app-specific components
+          const appComponents = orchestrator.getComponentSpecs(session.context.appType);
           const appComponent = appComponents[params.componentName];
           
           if (!appComponent) {
@@ -234,8 +399,8 @@ async function handleTool(toolName, params, user) {
           
           return {
             componentName: params.componentName,
-            appType: params.appType,
-            specification: appComponent
+            specification: appComponent,
+            appType: session.context.appType
           };
         }
         
@@ -327,7 +492,7 @@ app.post('/', async (req, res) => {
         return res.json({
           jsonrpc: '2.0',
           result: {
-            protocolVersion: '2024-11-05',
+            protocolVersion: '2025-06-18',
             capabilities: {
               tools: {
                 listChanged: true
@@ -335,7 +500,7 @@ app.post('/', async (req, res) => {
             },
             serverInfo: {
               name: 'simple-design-mcp-orchestrator',
-              version: '3.0.0'
+              version: '3.1.0'
             }
           },
           id
@@ -495,7 +660,7 @@ app.use((error, req, res, next) => {
 
 // Start server
 app.listen(PORT, HOST, () => {
-  console.log(`Simple Design MCP Orchestrator v3.0 running on ${HOST}:${PORT}`);
+  console.log(`Simple Design MCP Orchestrator v3.1 running on ${HOST}:${PORT}`);
   console.log(`Orchestrating design workflows for Claude Code local execution`);
   
   if (isDevelopment) {
