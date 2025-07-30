@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { WorkflowOrchestrator } from './src/orchestrator/WorkflowOrchestrator.js';
 import { createLightweightResponse } from './src/orchestrator/LightweightResponse.js';
-import { verifyJwtMiddleware } from './src/auth/verifyTokenFixed.js';
+import { verifyJwt } from './src/auth/verifyToken.js';
 
 // Load environment variables
 dotenv.config();
@@ -183,7 +183,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Define authentication middleware that doesn't send responses
+// Define authentication middleware
 const authMiddleware = skipAuth ? 
   (req, res, next) => {
     if (isDevelopment) {
@@ -196,7 +196,7 @@ const authMiddleware = skipAuth ?
     };
     next();
   } : 
-  verifyJwtMiddleware;
+  verifyJwt;
 
 // Tool handler functions - Now returns workflows instead of executing
 async function handleTool(toolName, params, user) {
@@ -262,11 +262,49 @@ async function handleTool(toolName, params, user) {
   }
 }
 
+// REST API endpoints for tool discovery and execution
+// GET /mcp/tools - Tool discovery endpoint (non-JSON-RPC)
+app.get('/mcp/tools', (req, res) => {
+  res.json({
+    tools: tools.map(tool => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema
+    }))
+  });
+});
+
+// POST /mcp/tools/:toolName - Direct tool execution (non-JSON-RPC)
+app.post('/mcp/tools/:toolName', authMiddleware, async (req, res) => {
+  const { toolName } = req.params;
+  const { params = {} } = req.body;
+  
+  if (isDevelopment) {
+    console.log(`[REST] Tool execution: ${toolName} with params:`, params);
+  }
+  
+  try {
+    const result = await handleTool(toolName, params, req.user);
+    res.json({
+      success: true,
+      result: typeof result === 'object' ? result : { text: result }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: 400,
+        message: error.message
+      }
+    });
+  }
+});
+
 // Request counter for debugging
 let requestCount = 0;
 const requestLog = new Map();
 
-// Main JSON-RPC endpoint
+// Public JSON-RPC endpoint for unauthenticated methods
 app.post('/', async (req, res) => {
   const requestId = ++requestCount;
   const startTime = Date.now();
@@ -314,38 +352,41 @@ app.post('/', async (req, res) => {
     });
   }
   
-  // Methods that don't require authentication
+  // Check if this is a public method
   const publicMethods = ['initialize', 'notifications/initialized', 'tools/list'];
   
-  // Check authentication for protected methods
+  // For protected methods, verify authentication
   if (!publicMethods.includes(method)) {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-    
-    if (!token && !skipAuth) {
-      return res.status(401).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32600,
-          message: 'Authentication required'
-        },
-        id: id || null
-      });
-    }
-    
-    if (token && !skipAuth) {
-      // Run auth middleware
-      await new Promise(resolve => authMiddleware(req, res, resolve));
+    // Apply auth check
+    if (!skipAuth) {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
       
-      // Check if auth failed
-      if (req.authError) {
+      if (!token) {
         return res.status(401).json({
           jsonrpc: '2.0',
-          error: req.authError,
+          error: {
+            code: -32600,
+            message: 'Authentication required'
+          },
           id: id || null
         });
       }
-    } else if (skipAuth) {
+      
+      // Verify token inline to get proper error handling
+      try {
+        await new Promise((resolve, reject) => {
+          verifyJwt(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (err) {
+        // Auth middleware already sent response
+        return;
+      }
+    } else {
+      // Dev mode
       req.user = {
         sub: 'dev-user',
         email: 'dev@example.com',
@@ -365,7 +406,7 @@ app.post('/', async (req, res) => {
         return res.json({
           jsonrpc: '2.0',
           result: {
-            protocolVersion: '2024-11-05',
+            protocolVersion: '2025-06-18',
             capabilities: {
               tools: {
                 listChanged: true

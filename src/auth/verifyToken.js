@@ -40,10 +40,12 @@ export function verifyJwt(req, res, next) {
 
   if (!token) {
     return res.status(401).json({
+      jsonrpc: '2.0',
       error: {
-        code: 401,
+        code: -32600,
         message: 'Authorization header with Bearer token required'
-      }
+      },
+      id: null
     });
   }
 
@@ -62,10 +64,12 @@ export function verifyJwt(req, res, next) {
           console.error('JWT verification failed:', err.message);
         }
         return res.status(401).json({
+          jsonrpc: '2.0',
           error: {
-            code: 401,
+            code: -32600,
             message: 'Invalid or expired token'
-          }
+          },
+          id: null
         });
       }
 
