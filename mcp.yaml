@@ -35,7 +35,7 @@ server:
       
   # Deployment Configuration
   deployment:
-    upstreamUrl: "https://simple-design-mcp-production.up.railway.app"
+    upstreamUrl: "https://simple-design-mcp.up.railway.app"
         
   # Tools & Resources  
   provides:
