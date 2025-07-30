@@ -132,19 +132,11 @@ if (isDevelopment) {
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
-  const recentRequests = isDevelopment ? 
-    Array.from(requestLog.entries()).slice(-10).map(([id, data]) => ({
-      id,
-      ...data
-    })) : [];
-    
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     server: 'simple-design-mcp-orchestrator',
-    version: '3.0.0',
-    requestCount,
-    recentRequests
+    version: '3.0.0'
   });
 });
 
@@ -262,85 +254,62 @@ async function handleTool(toolName, params, user) {
   }
 }
 
-// REST API endpoints for tool discovery and execution
-// GET /mcp/tools - Tool discovery endpoint (non-JSON-RPC)
-app.get('/mcp/tools', (req, res) => {
-  res.json({
-    tools: tools.map(tool => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema
-    }))
-  });
-});
-
-// POST /mcp/tools/:toolName - Direct tool execution (non-JSON-RPC)
-app.post('/mcp/tools/:toolName', authMiddleware, async (req, res) => {
-  const { toolName } = req.params;
-  const { params = {} } = req.body;
-  
-  if (isDevelopment) {
-    console.log(`[REST] Tool execution: ${toolName} with params:`, params);
-  }
-  
-  try {
-    const result = await handleTool(toolName, params, req.user);
-    res.json({
-      success: true,
-      result: typeof result === 'object' ? result : { text: result }
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: {
-        code: 400,
-        message: error.message
-      }
-    });
-  }
-});
-
-// Request counter for debugging
-let requestCount = 0;
-const requestLog = new Map();
-
-// Public JSON-RPC endpoint for unauthenticated methods
+// Main JSON-RPC endpoint
 app.post('/', async (req, res) => {
-  const requestId = ++requestCount;
-  const startTime = Date.now();
+  const acceptsSSE = req.headers.accept?.includes('text/event-stream');
+  const { method, params, id, jsonrpc } = req.body;
   
-  // Log request for debugging
-  if (isDevelopment) {
-    requestLog.set(requestId, {
-      method: req.body?.method,
-      time: new Date().toISOString()
-    });
+  // Methods that don't require authentication
+  const publicMethods = ['initialize', 'notifications/initialized', 'tools/list'];
+  
+  // Check authentication for protected methods
+  if (!publicMethods.includes(method)) {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
     
-    // Keep only last 100 requests
-    if (requestLog.size > 100) {
-      const firstKey = requestLog.keys().next().value;
-      requestLog.delete(firstKey);
+    if (!token && !skipAuth) {
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32600,
+          message: 'Authentication required'
+        },
+        id: id || null
+      });
+    }
+    
+    if (token && !skipAuth) {
+      try {
+        await new Promise((resolve, reject) => {
+          authMiddleware(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (err) {
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid or expired token'
+          },
+          id: id || null
+        });
+      }
+    } else if (skipAuth) {
+      req.user = {
+        sub: 'dev-user',
+        email: 'dev@example.com',
+        scope: 'read:user'
+      };
     }
   }
   
-  // Disable SSE for now - it might be causing connection issues
-  const acceptsSSE = false; // req.headers.accept?.includes('text/event-stream');
-  
-  // Validate request body
-  if (!req.body || typeof req.body !== 'object') {
-    return res.status(400).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32700,
-        message: 'Parse error - invalid JSON'
-      },
-      id: null
-    });
+  // Log requests in development
+  if (isDevelopment) {
+    console.log(`[MCP] JSON-RPC Request: method=${method}, id=${id}, user=${req.user?.email || req.user?.sub}`);
   }
   
-  const { method, params, id, jsonrpc } = req.body;
-  
-  // Validate JSON-RPC version
   if (jsonrpc !== '2.0') {
     return res.status(400).json({
       jsonrpc: '2.0',
@@ -352,61 +321,13 @@ app.post('/', async (req, res) => {
     });
   }
   
-  // Check if this is a public method
-  const publicMethods = ['initialize', 'notifications/initialized', 'tools/list'];
-  
-  // For protected methods, verify authentication
-  if (!publicMethods.includes(method)) {
-    // Apply auth check
-    if (!skipAuth) {
-      const authHeader = req.headers.authorization;
-      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
-      
-      if (!token) {
-        return res.status(401).json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32600,
-            message: 'Authentication required'
-          },
-          id: id || null
-        });
-      }
-      
-      // Verify token inline to get proper error handling
-      try {
-        await new Promise((resolve, reject) => {
-          verifyJwt(req, res, (err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      } catch (err) {
-        // Auth middleware already sent response
-        return;
-      }
-    } else {
-      // Dev mode
-      req.user = {
-        sub: 'dev-user',
-        email: 'dev@example.com',
-        scope: 'read:user'
-      };
-    }
-  }
-  
-  // Log requests in development
-  if (isDevelopment) {
-    console.log(`[MCP] Request #${requestId}: method=${method}, id=${id}, user=${req.user?.email || req.user?.sub}`);
-  }
-  
   try {
     switch (method) {
       case 'initialize':
         return res.json({
           jsonrpc: '2.0',
           result: {
-            protocolVersion: '2025-06-18',
+            protocolVersion: '2024-11-05',
             capabilities: {
               tools: {
                 listChanged: true
