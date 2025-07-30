@@ -14,6 +14,7 @@ dotenv.config();
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000');
 const isDevelopment = process.env.NODE_ENV === 'development';
+const skipAuth = process.env.SKIP_AUTH === 'true';
 
 // Security middleware
 app.use(helmet());
@@ -295,8 +296,9 @@ app.use((err, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Simple Design MCP Server running on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`Simple Design MCP Server running on ${HOST}:${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`MCP discovery: http://localhost:${PORT}/.well-known/mcp.json`);
   console.log(`Environment: ${isDevelopment ? 'development' : 'production'}`);

@@ -1,168 +1,168 @@
-# Simple Design MCP Server
+# Simple Design MCP
 
 Design beautiful apps without coding - just tell me what you want to build! 🎨
 
-## 🌟 Overview
+## What is Simple Design?
 
-Simple Design MCP is a conversational design tool that lets non-technical builders create professional React and React Native apps through natural language. No coding required - just describe your vision and watch it come to life!
+Simple Design is a conversational AI tool that helps non-technical builders create professional React and React Native apps through natural language. No coding required - just describe your vision and watch it come to life!
 
-## ✨ Features
+## Available Tools
 
-- **Natural Language Design**: Just describe what you want in plain English
-- **Smart Defaults**: Automatically chooses the right UI library, colors, and layout based on your app type
-- **Real Code Generation**: Produces production-ready React/React Native code
-- **No Technical Decisions**: The AI handles all technical choices for you
-- **Local-First**: Everything runs on your machine, no cloud dependencies
-- **Beautiful Templates**: Pre-configured with Material-UI, Tailwind, or shadcn/ui
+### 🗣️ `simple_design_chat`
+Start a conversation about your app idea. Just describe what you want in plain English!
 
-## 🚀 Installation
-
-```bash
-npx @your-username/simple-design-mcp
+**Example:**
+```
+Use simple_design_chat with message "I want to build a recipe sharing app for home cooks"
 ```
 
-Or install globally:
+### 👀 `simple_design_show`
+Preview your current design with all the details - colors, components, features, and layout.
 
-```bash
-npm install -g @your-username/simple-design-mcp
+**Example:**
+```
+Use simple_design_show to see my current design
 ```
 
-## 🎯 Usage
+### 📦 `simple_design_export`
+Generate production-ready React or React Native code for your app.
 
-### Via Commands.com (Recommended)
-
-Once deployed on Commands.com, you can use it directly in Claude:
-
+**Example:**
 ```
-Use simple_design_chat to build a recipe app for home cooks
+Use simple_design_export to generate my app code
 ```
 
-### Local Development
+### 💡 `simple_design_examples`
+Get inspiration from example app designs for different categories.
 
-1. Clone and install:
-```bash
-git clone https://github.com/kylegold/simple-design-mcp.git
-cd simple-design-mcp
-npm install
+**Example:**
+```
+Use simple_design_examples with type "fitness" to see fitness app examples
 ```
 
-2. Run the server:
-```bash
-npm run dev  # Development mode with logging
-npm start    # Production mode
+## How to Use
+
+### Step 1: Start Your Design Journey
+Tell me about your app idea using natural language:
+```
+Use simple_design_chat with message "I need an app for tracking my plant watering schedule"
 ```
 
-3. Test the endpoints:
-```bash
-# Health check
-curl http://localhost:3000/health
+### Step 2: Answer Simple Questions
+I'll ask you a few friendly questions to understand your vision better:
+- Who will use your app?
+- What's the main problem it solves?
+- Any apps you like the style of?
 
-# List tools
-curl http://localhost:3000/mcp/tools
+No technical knowledge needed - just answer naturally!
 
-# Start designing
-curl -X POST http://localhost:3000/mcp/tools/chat \
-  -H "Content-Type: application/json" \
-  -d '{"params": {"message": "I want to build a recipe app"}}'
+### Step 3: Review Your Design
+Check out what I've created for you:
+```
+Use simple_design_show
 ```
 
-### Available Tools
+You'll see:
+- Your chosen UI library (Material-UI, Tailwind, etc.)
+- Color scheme perfectly matched to your app type
+- All planned features and screens
+- Mobile-first responsive layout
 
-- **`simple_design_chat`** - Tell me what you want to build or change
-- **`simple_design_show`** - See your current design
-- **`simple_design_export`** - Generate the actual app code
-- **`simple_design_examples`** - Get inspiration from different app types
-
-### 3. Example Conversations
-
-#### Starting a New Project
+### Step 4: Make Changes
+Want to adjust something? Just tell me:
 ```
-You: I need an app for tracking my workouts
-Bot: A fitness app - let's help people get healthy! Who will use this app?
-You: Busy professionals who want quick workouts
-Bot: Perfect! I'll design something efficient and motivating...
+Use simple_design_chat with message "Can we add a dark mode option?"
 ```
 
-#### Adding Features
+### Step 5: Export Your App
+Happy with the design? Generate your code:
 ```
-You: Can we add a way to upload photos?
-Bot: Great idea! I've added photo upload to your app. Users can now add and view photos.
-```
-
-#### Changing Styles
-```
-You: Make it darker and more modern
-Bot: Love it! I've updated the design to be darker and more sophisticated. The app now has a sleek dark theme with great contrast.
+Use simple_design_export
 ```
 
-## 🎨 Smart Defaults
+You'll get a complete React/React Native project with:
+- ✅ Clean, modular components
+- ✅ Modern UI library integrated
+- ✅ Responsive design built-in
+- ✅ Ready to `npm install && npm start`
 
-The tool automatically selects appropriate design systems based on your app type:
+## Features
 
+### 🎯 Smart Defaults
+I automatically choose the perfect tech stack based on your app type:
 - **Recipe Apps**: Warm colors, card layouts, Material-UI
-- **Fitness Apps**: Energetic colors, dashboard layout, Tailwind
-- **Social Apps**: Modern design, feed layout, shadcn/ui
+- **Fitness Apps**: Energetic design, dashboards, Tailwind
+- **Social Apps**: Modern feel, feeds, shadcn/ui
 - **And many more...**
 
-## 📁 Generated Project Structure
+### 🔄 Iterative Design
+Change your mind? No problem! Add features, adjust styles, or pivot your entire concept through natural conversation.
+
+### 🚀 Production-Ready Code
+Every app I generate includes:
+- Professional project structure
+- Package.json with all dependencies
+- README with clear instructions
+- Design documentation explaining all decisions
+- Clean, maintainable code
+
+## Example Conversation
 
 ```
-my-awesome-app/
-├── src/
-│   ├── components/      # Reusable UI components
-│   ├── screens/         # Full page layouts
-│   ├── styles/          # Theme and styling
-│   └── App.js          # Main application file
-├── design/
-│   ├── decisions.md    # Design rationale in plain English
-│   └── project.json    # Conversation history
-├── package.json        # Ready to npm install
-└── README.md          # Project documentation
+You: Use simple_design_chat with message "I want to build a meditation app"
+
+Bot: I love it! A meditation app - perfect for mindfulness!
+     Let me ask a few quick questions...
+     1. Who's going to use your meditation app?
+
+You: Use simple_design_chat with message "Busy professionals who need quick stress relief"
+
+Bot: Great! I'm thinking calm colors, simple navigation, and features like
+     guided meditations, breathing exercises, and progress tracking...
+
+You: Use simple_design_show
+
+Bot: [Shows complete design preview with colors, components, and features]
+
+You: Use simple_design_export
+
+Bot: ✨ Your meditation app is ready! Created at: ./my-meditation-app
 ```
 
-## 🛠️ For Developers
+## Supported App Types
 
-### Adding to Claude Desktop
+- 📱 Mobile Apps (React Native)
+- 💻 Web Apps (React)
+- 🍳 Recipe & Food Apps
+- 💪 Fitness & Health Apps
+- 💬 Social & Chat Apps
+- ✅ Productivity & Task Apps
+- 🎓 Learning & Education Apps
+- 🛍️ Shopping & E-commerce Apps
+- 💰 Finance & Budget Apps
+- ✈️ Travel & Booking Apps
+- 🎵 Music & Audio Apps
+- 📸 Photo & Gallery Apps
 
-Add this to your Claude Desktop configuration:
+## No Technical Knowledge Required
 
-```json
-{
-  "mcpServers": {
-    "simple-design": {
-      "command": "npx",
-      "args": ["@your-username/simple-design-mcp"]
-    }
-  }
-}
+You don't need to know:
+- ❌ Programming languages
+- ❌ Framework differences
+- ❌ Design principles
+- ❌ Technical terminology
+
+Just describe what you want to build in your own words!
+
+## Get Started
+
+Ready to build your app? Just start with:
+```
+Use simple_design_chat with message "I want to build [your app idea]"
 ```
 
-### Running Locally
-
-```bash
-# Clone the repo
-git clone https://github.com/yourusername/simple-design-mcp.git
-cd simple-design-mcp
-
-# Install dependencies
-npm install
-
-# Run the server
-npm start
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-MIT
-
-## 🙏 Acknowledgments
-
-Built for [Commands.com](https://commands.com) to make app design accessible to everyone!
+Happy building! 🚀
 
 ---
 
-**Made with ❤️ for non-technical builders who have great ideas**
+Made with ❤️ by Kyle Gold | [GitHub](https://github.com/kylegold/simple-design-mcp)

@@ -95,6 +95,11 @@ export class ConversationAgent {
     return triggers.some(t => message.toLowerCase().includes(t));
   }
   
+  async analyzeDescription(description) {
+    // This method was referenced but not implemented
+    return this.extractProjectInfo(description);
+  }
+  
   extractProjectInfo(message) {
     // Smart extraction from natural language
     const categories = {

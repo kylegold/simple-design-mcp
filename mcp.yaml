@@ -32,7 +32,7 @@ server:
       
   # Deployment Configuration
   deployment:
-    upstreamUrl: "https://simple-design-mcp.up.railway.app"  # Update with your deployment URL
+    upstreamUrl: "https://simple-design-mcp.up.railway.app"
         
   # Tools & Resources  
   provides:
