@@ -333,24 +333,61 @@ Your ${exportConversation.designState.platform} app is ready to run!`;
 }
 
 // Main JSON-RPC endpoint
-app.post('/', authMiddleware, async (req, res) => {
+app.post('/', async (req, res) => {
   // Check if client supports SSE
   const acceptsSSE = req.headers.accept?.includes('text/event-stream');
   
-  // All requests must be authenticated (or in dev mode)
-  if (!req.user && !skipAuth) {
-    return res.status(401).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32600,
-        message: 'Authentication required'
-      },
-      id: null
-    });
-  }
-  
   // Handle JSON-RPC request
   const { method, params, id, jsonrpc } = req.body;
+  
+  // Methods that don't require authentication
+  const publicMethods = ['initialize', 'notifications/initialized', 'tools/list'];
+  
+  // Check authentication for protected methods
+  if (!publicMethods.includes(method)) {
+    // Apply authentication check
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    
+    if (!token && !skipAuth) {
+      return res.status(401).json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32600,
+          message: 'Authentication required'
+        },
+        id: id || null
+      });
+    }
+    
+    // If we have a token, verify it
+    if (token && !skipAuth) {
+      try {
+        await new Promise((resolve, reject) => {
+          authMiddleware(req, res, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } catch (err) {
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid or expired token'
+          },
+          id: id || null
+        });
+      }
+    } else if (skipAuth) {
+      // Mock user for development
+      req.user = {
+        sub: 'dev-user',
+        email: 'dev@example.com',
+        scope: 'read:user'
+      };
+    }
+  }
   
   // Log requests in development
   if (isDevelopment) {
