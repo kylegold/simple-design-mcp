@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { WorkflowOrchestrator } from './src/orchestrator/WorkflowOrchestrator.js';
 import { createLightweightResponse } from './src/orchestrator/LightweightResponse.js';
-import { verifyJwt } from './src/auth/verifyToken.js';
+import { verifyJwtMiddleware } from './src/auth/verifyTokenFixed.js';
 
 // Load environment variables
 dotenv.config();
@@ -132,11 +132,19 @@ if (isDevelopment) {
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
+  const recentRequests = isDevelopment ? 
+    Array.from(requestLog.entries()).slice(-10).map(([id, data]) => ({
+      id,
+      ...data
+    })) : [];
+    
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     server: 'simple-design-mcp-orchestrator',
-    version: '3.0.0'
+    version: '3.0.0',
+    requestCount,
+    recentRequests
   });
 });
 
@@ -175,7 +183,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Define authentication middleware
+// Define authentication middleware that doesn't send responses
 const authMiddleware = skipAuth ? 
   (req, res, next) => {
     if (isDevelopment) {
@@ -188,7 +196,7 @@ const authMiddleware = skipAuth ?
     };
     next();
   } : 
-  verifyJwt;
+  verifyJwtMiddleware;
 
 // Tool handler functions - Now returns workflows instead of executing
 async function handleTool(toolName, params, user) {
@@ -254,10 +262,57 @@ async function handleTool(toolName, params, user) {
   }
 }
 
+// Request counter for debugging
+let requestCount = 0;
+const requestLog = new Map();
+
 // Main JSON-RPC endpoint
 app.post('/', async (req, res) => {
-  const acceptsSSE = req.headers.accept?.includes('text/event-stream');
+  const requestId = ++requestCount;
+  const startTime = Date.now();
+  
+  // Log request for debugging
+  if (isDevelopment) {
+    requestLog.set(requestId, {
+      method: req.body?.method,
+      time: new Date().toISOString()
+    });
+    
+    // Keep only last 100 requests
+    if (requestLog.size > 100) {
+      const firstKey = requestLog.keys().next().value;
+      requestLog.delete(firstKey);
+    }
+  }
+  
+  // Disable SSE for now - it might be causing connection issues
+  const acceptsSSE = false; // req.headers.accept?.includes('text/event-stream');
+  
+  // Validate request body
+  if (!req.body || typeof req.body !== 'object') {
+    return res.status(400).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32700,
+        message: 'Parse error - invalid JSON'
+      },
+      id: null
+    });
+  }
+  
   const { method, params, id, jsonrpc } = req.body;
+  
+  // Validate JSON-RPC version
+  if (jsonrpc !== '2.0') {
+    return res.status(400).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32600,
+        message: 'Invalid Request - jsonrpc must be "2.0"'
+      },
+      id: id || null
+    });
+  }
   
   // Methods that don't require authentication
   const publicMethods = ['initialize', 'notifications/initialized', 'tools/list'];
@@ -279,20 +334,14 @@ app.post('/', async (req, res) => {
     }
     
     if (token && !skipAuth) {
-      try {
-        await new Promise((resolve, reject) => {
-          authMiddleware(req, res, (err) => {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      } catch (err) {
+      // Run auth middleware
+      await new Promise(resolve => authMiddleware(req, res, resolve));
+      
+      // Check if auth failed
+      if (req.authError) {
         return res.status(401).json({
           jsonrpc: '2.0',
-          error: {
-            code: -32600,
-            message: 'Invalid or expired token'
-          },
+          error: req.authError,
           id: id || null
         });
       }
@@ -307,18 +356,7 @@ app.post('/', async (req, res) => {
   
   // Log requests in development
   if (isDevelopment) {
-    console.log(`[MCP] JSON-RPC Request: method=${method}, id=${id}, user=${req.user?.email || req.user?.sub}`);
-  }
-  
-  if (jsonrpc !== '2.0') {
-    return res.status(400).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32600,
-        message: 'Invalid Request - jsonrpc must be "2.0"'
-      },
-      id: id || null
-    });
+    console.log(`[MCP] Request #${requestId}: method=${method}, id=${id}, user=${req.user?.email || req.user?.sub}`);
   }
   
   try {
@@ -334,8 +372,8 @@ app.post('/', async (req, res) => {
               }
             },
             serverInfo: {
-              name: 'simple-design-mcp',
-              version: '2.0.0'
+              name: 'simple-design-mcp-orchestrator',
+              version: '3.0.0'
             }
           },
           id
